@@ -81,14 +81,12 @@ app.post('/logout', async (req, res) => {
     }
 });
 
-// 🔴 গ্যালারির ফাইলগুলো আনার API
 app.post('/get-files', (req, res) => {
     if (req.body.password !== ADMIN_PASSWORD) return res.status(401).send('Unauthorized');
     const dir = './uploads/';
     if (!fs.existsSync(dir)) return res.json({ images: [], csvs: [] });
     
     let files = fs.readdirSync(dir);
-    // নতুন ফাইলগুলো প্রথমে দেখানোর জন্য সাজানো
     files.sort((a, b) => fs.statSync(path.join(dir, b)).mtime.getTime() - fs.statSync(path.join(dir, a)).mtime.getTime());
 
     const images = files.filter(f => f.match(/\.(jpg|jpeg|png|gif|mp4)$/i));
@@ -97,7 +95,6 @@ app.post('/get-files', (req, res) => {
     res.json({ images, csvs });
 });
 
-// 🔴 নতুন: সরাসরি গ্যালারিতে ফাইল আপলোডের API
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (req.body.password !== ADMIN_PASSWORD) return res.status(401).send('Unauthorized');
     if (req.file) {
@@ -107,6 +104,15 @@ app.post('/upload-file', upload.single('file'), (req, res) => {
     }
 });
 
+// ৫ থেকে ১৫ সেকেন্ডের রেন্ডম গ্যাপ তৈরি করার ফাংশন
+const randomDelay = () => {
+    const min = 5;
+    const max = 15;
+    const delayTime = Math.floor(Math.random() * (max - min + 1) + min) * 1000;
+    return new Promise(resolve => setTimeout(resolve, delayTime));
+};
+
+// সিঙ্গেল মেসেজ পাঠানোর আগের API
 app.post('/send', upload.single('media'), async (req, res) => {
     if (req.body.password !== ADMIN_PASSWORD) return res.status(401).send('Unauthorized');
 
@@ -123,10 +129,12 @@ app.post('/send', upload.single('media'), async (req, res) => {
             mediaPath = path.join(__dirname, 'uploads', path.basename(existingMedia));
         }
 
+        // মেসেজ পাঠানোর আগে রেন্ডম গ্যাপ (৫-১৫ সেকেন্ড)
+        await randomDelay();
+
         if (mediaPath && fs.existsSync(mediaPath)) {
             const media = MessageMedia.fromFilePath(mediaPath);
             await client.sendMessage(formattedNumber, media, { caption: message });
-            // فایل সার্ভারেই সেভ থাকবে, ডিলিট হবে না
         } else {
             await client.sendMessage(formattedNumber, message);
         }
