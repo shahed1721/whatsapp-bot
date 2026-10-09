@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Craft BD - WA Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); text-align: left; }
+        input, textarea, button { width: 100%; margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { background: #28a745; color: white; font-weight: bold; cursor: pointer; border: none; padding: 12px; margin-top: 15px;}
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #logs { margin-top: 15px; background: #222; color: #0f0; padding: 10px; height: 150px; overflow-y: scroll; font-family: monospace; border-radius: 5px;}
+        .text-center { text-align: center; }
+        
+        .stats-container { display: flex; justify-content: space-between; margin-top: 20px; font-weight: bold; font-size: 18px; padding: 15px; background: #e9ecef; border-radius: 5px; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; width: 30%; }
+        .stat-total { color: #007bff; }
+        .stat-success { color: #28a745; }
+        .stat-fail { color: #dc3545; }
+        .stat-number { font-size: 24px; margin-top: 5px; }
+        
+        .header-box { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        #logoutBtn { background: #dc3545; width: auto; margin-top: 0; padding: 8px 15px; font-size: 14px; }
+        .info-text { font-size: 12px; color: #555; background: #eef2f5; padding: 8px; border-left: 3px solid #007bff; margin-top: 5px; margin-bottom: 5px;}
+        #previewBox { background: #e8f5e9; border: 1px solid #c8e6c9; padding: 12px; border-radius: 5px; font-style: italic; color: #2e7d32; min-height: 50px; white-space: pre-wrap; margin-top: 10px;}
+
+        .menu-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .menu-btn { flex: 1; margin-top: 0; background: #e9ecef; color: #333; }
+        .menu-btn.active { background: #007bff; color: white; }
+        #qrSection, #mainApp, #tabSplitter { display: none; }
+        
+        .gal-btn { background: #17a2b8; color: white; padding: 5px 10px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; float: right; margin-top: 2px; }
+        .selected-file-text { color: #28a745; font-size: 13px; font-weight: bold; margin-top: 5px; display: block; }
+        
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #fff; margin: 10% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;}
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .gallery-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .gallery-img { width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent; border-radius: 5px; }
+        .gallery-img:hover { border-color: #007bff; }
+        .csv-item { padding: 10px; background: #f4f7f6; margin-bottom: 5px; cursor: pointer; border-radius: 5px; border: 1px solid #ddd; }
+        .csv-item:hover { background: #e3f2fd; border-color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container" id="loginBox">
+        <h2 class="text-center">🔐 Web Craft BD - লগইন</h2>
+        <input type="password" id="adminPassword" placeholder="পাসওয়ার্ড দিন...">
+        <button id="loginBtn">প্রবেশ করুন</button>
+    </div>
+
+    <div class="container" id="qrSection">
+        <h2 class="text-center">📱 হোয়াটসঅ্যাপ কানেক্ট করুন</h2>
+        <p class="text-center">আপনার হোয়াটসঅ্যাপ থেকে নিচের QR কোডটি স্ক্যান করুন।</p>
+        <div class="text-center">
+            <img id="qrImage" src="" alt="QR Code Loading..." style="max-width: 250px; display: none;">
+            <p id="qrLoading">অপেক্ষা করুন, QR কোড তৈরি হচ্ছে...</p>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp">
+        <div class="header-box">
+            <h2 style="margin: 0;">Web Craft BD</h2>
+            <button id="logoutBtn">লগআউট</button>
+        </div>
+
+        <div class="menu-tabs">
+            <button class="menu-btn active" id="btnSender" onclick="switchTab('sender')">🚀 বাল্ক সেন্ডার</button>
+            <button class="menu-btn" id="btnSplitter" onclick="switchTab('splitter')">✂️ CSV স্প্লিটার</button>
+        </div>
+
+        <!-- বাল্ক সেন্ডার ট্যাব -->
+        <div id="tabSender">
+            <label>১. কাস্টমারদের CSV ফাইল দিন 
+                <button class="gal-btn" onclick="openGallery('csv')">📂 আগের ফাইল বাছুন</button>
+            </label>
+            <input type="file" id="csvFile" accept=".csv" onchange="clearGallerySelection('csv')">
+            <span id="selectedCsvText" class="selected-file-text"></span>
+
+            <label style="margin-top: 10px; display: block;">২. ছবি/ভিডিও দিন (ঐচ্ছিক) 
+                <button class="gal-btn" onclick="openGallery('image')">🖼️ গ্যালারি দেখুন</button>
+            </label>
+            <input type="file" id="mediaFile" onchange="clearGallerySelection('image')">
+            <span id="selectedMediaText" class="selected-file-text"></span>
+
+            <label style="margin-top: 10px; display: block;">৩. মেসেজ লিখুন</label>
+            <div class="info-text">টিপস: <code>[Name]</code> এবং <code>[Product]</code> ব্যবহার করুন।</div>
+            <textarea id="messageBox" rows="4" placeholder="হ্যালো [Name], আপনার কেনা [Product] টি কেমন চলছে?"></textarea>
+
+            <label style="margin-top: 15px; display: block; font-weight: bold; color: #d35400;">👀 লাইভ প্রিভিউ:</label>
+            <div id="previewBox">আপনার লেখা মেসেজ এখানে দেখতে পারবেন...</div>
+
+            <label style="margin-top: 15px; display: block;">৪. প্রতি মেসেজের মাঝে বিরতি (সেকেন্ড)</label>
+            <input type="number" id="delayBox" value="15" min="5">
+
+            <button id="sendBtn">ক্যাম্পেইন শুরু করুন</button>
+
+            <div class="stats-container">
+                <div class="stat-box stat-total"><span>মোট নাম্বার</span><span id="totalCount" class="stat-number">0</span></div>
+                <div class="stat-box stat-success"><span>✔ সফল</span><span id="successCount" class="stat-number">0</span></div>
+                <div class="stat-box stat-fail"><span>✖ ব্যর্থ</span><span id="failCount" class="stat-number">0</span></div>
+            </div>
+
+            <div id="logs">সিস্টেম রেডি... লগ এখানে দেখাবে।<br></div>
+        </div>
+
+        <!-- CSV স্প্লিটার ট্যাব -->
+        <div id="tabSplitter">
+            <h3 style="margin-top: 0; color: #333;">বড় ফাইল কেটে ছোট করুন</h3>
+            <label>১. আপনার বড় CSV ফাইলগুলো সিলেক্ট করুন (একাধিক দেওয়া যাবে)</label>
+            <input type="file" id="splitFiles" accept=".csv" multiple>
+            <label>২. প্রতি ফাইলে কতজনের ডাটা রাখবেন?</label>
+            <input type="number" id="chunkSize" value="100" min="10">
+            <button id="splitProcessBtn" style="background: #17a2b8;">ফাইলগুলো ভাগ করুন</button>
+            <div id="downloadArea" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- 🔴 গ্যালারি পপআপ মোডাল (আপডেট করা হয়েছে) -->
+    <div id="galleryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGallery()">&times;</span>
+            <h3 id="galleryTitle" style="margin-top: 0;">আপনার আগের ফাইলসমূহ</h3>
+            
+            <!-- নতুন আপলোড সেকশন -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+                <label style="font-size: 14px; font-weight: bold; color: #007bff;">সরাসরি গ্যালারিতে নতুন ফাইল/ছবি জমা করুন:</label><br>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="file" id="galleryUploadInput" style="margin-top: 0; padding: 8px;">
+                    <button onclick="uploadToGallery()" style="background: #28a745; width: auto; margin-top: 0; padding: 10px 20px;">আপলোড</button>
+                </div>
+                <div id="uploadStatus" style="color: green; font-size: 13px; margin-top: 5px; font-weight: bold;"></div>
+            </div>
+
+            <p style="font-size: 13px; color: #666; border-bottom: 1px solid #eee; padding-bottom: 5px;">যে ফাইলটি ব্যবহার করতে চান সেটির ওপর ক্লিক করুন:</p>
+            <div id="galleryContent">লোডিং...</div>
+        </div>
+    </div>
+
+    <script>
+        let savedPassword = "";
+        let selectedGalleryCsv = "";
+        let selectedGalleryMedia = "";
+        let currentGalleryType = 'image'; // বর্তমানে কোন গ্যালারি খোলা আছে তা বোঝার জন্য
+
+        function switchTab(tabName) {
+            if(tabName === 'sender') {
+                document.getElementById('tabSender').style.display = 'block';
+                document.getElementById('tabSplitter').style.display = 'none';
+                document.getElementById('btnSender').classList.add('active');
+                document.getElementById('btnSplitter').classList.remove('active');
+            } else {
+                document.getElementById('tabSender').style.display = 'none';
+                document.getElementById('tabSplitter').style.display = 'block';
+                document.getElementById('btnSender').classList.remove('active');
+                document.getElementById('btnSplitter').classList.add('active');
+            }
+        }
+
+        // 🔴 গ্যালারিতে ফাইল সরাসরি আপলোড করার ফাংশন
+        async function uploadToGallery() {
+            const fileInput = document.getElementById('galleryUploadInput');
+            if(!fileInput.files[0]) return alert('দয়া করে আপলোড করার জন্য একটি ফাইল সিলেক্ট করুন!');
+            
+            const formData = new FormData();
+            formData.append('password', savedPassword);
+            formData.append('file', fileInput.files[0]);
+            
+            document.getElementById('uploadStatus').style.color = "blue";
+            document.getElementById('uploadStatus').innerText = "আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...";
+            
+            try {
+                const res = await fetch('/upload-file', { method: 'POST', body: formData });
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('uploadStatus').style.color = "green";
+                    document.getElementById('uploadStatus').innerText = "✅ আপলোড সফল হয়েছে!";
+                    fileInput.value = ""; 
+                    
+                    // ফাইল আপলোড হওয়ার সাথে সাথে গ্যালারি রিফ্রেশ করা
+                    openGallery(currentGalleryType); 
+                    
+                    setTimeout(() => { document.getElementById('uploadStatus').innerText = ""; }, 4000);
+                } else {
+                    document.getElementById('uploadStatus').style.color = "red";
+                    document.getElementById('uploadStatus').innerText = "❌ আপলোড ব্যর্থ হয়েছে!";
+                }
+            } catch(e) {
+                document.getElementById('uploadStatus').style.color = "red";
+                document.getElementById('uploadStatus').innerText = "❌ সার্ভার এরর!";
+            }
+        }
+
+        async function openGallery(type) {
+            currentGalleryType = type;
+            document.getElementById('galleryModal').style.display = "block";
+            document.getElementById('galleryContent').innerHTML = "লোডিং হচ্ছে...";
+            document.getElementById('galleryTitle').innerText = type === 'image' ? "🖼️ আপনার আগের ছবি/ভিডিও" : "📄 আপনার আগের CSV ফাইল";
+            
+            try {
+                const res = await fetch('/get-files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: savedPassword }) });
+                const data = await res.json();
+                
+                let html = "";
+                if (type === 'image') {
+                    if (data.images.length === 0) html = "<p>কোনো ছবি পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
+                    else {
+                        html = '<div class="gallery-grid">';
+                        data.images.forEach(img => {
+                            html += `<img src="/uploads/${img}" class="gallery-img" onclick="selectGalleryItem('${img}', 'image')">`;
+                        });
+                        html += '</div>';
+                    }
+                } else {
+                    if (data.csvs.length === 0) html = "<p>কোনো CSV ফাইল পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
+                    else {
+                        data.csvs.forEach(csv => {
+                            html += `<div class="csv-item" onclick="selectGalleryItem('${csv}', 'csv')">📄 ${csv}</div>`;
+                        });
+                    }
+                }
+                document.getElementById('galleryContent').innerHTML = html;
+            } catch(e) {
+                document.getElementById('galleryContent').innerHTML = "এরর হয়েছে!";
+            }
+        }
+
+        function selectGalleryItem(filename, type) {
+            if (type === 'image') {
+                selectedGalleryMedia = filename;
+                document.getElementById('mediaFile').value = ""; 
+                document.getElementById('selectedMediaText').innerText = "✅ গ্যালারি থেকে সিলেক্টেড: " + filename;
+            } else {
+                selectedGalleryCsv = filename;
+                document.getElementById('csvFile').value = ""; 
+                document.getElementById('selectedCsvText').innerText = "✅ গ্যালারি থেকে সিলেক্টেড: " + filename;
+            }
+            closeGallery();
+        }
+
+        function closeGallery() { document.getElementById('galleryModal').style.display = "none"; }
+        function clearGallerySelection(type) {
+            if(type === 'image') { selectedGalleryMedia = ""; document.getElementById('selectedMediaText').innerText = ""; }
+            if(type === 'csv') { selectedGalleryCsv = ""; document.getElementById('selectedCsvText').innerText = ""; }
+        }
+
+        const readFileAsText = (file) => new Promise((resolve) => {
+            const reader = new FileReader(); reader.onload = (e) => resolve(e.target.result); reader.readAsText(file);
+        });
+
+        document.getElementById('splitProcessBtn').addEventListener('click', async () => {
+            const files = document.getElementById('splitFiles').files;
+            const chunkSize = parseInt(document.getElementById('chunkSize').value) || 100;
+            const downloadArea = document.getElementById('downloadArea');
+            if (files.length === 0) return alert("ফাইল সিলেক্ট করুন!");
+            
+            let header = ""; let allRows = [];
+            for (let i = 0; i < files.length; i++) {
+                const text = await readFileAsText(files[i]);
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                if (lines.length > 0) {
+                    if (header === "") header = lines[0]; 
+                    allRows.push(...lines.slice(1)); 
+                }
+            }
+            if (allRows.length === 0) return;
+
+            let chunks = [];
+            for (let i = 0; i < allRows.length; i += chunkSize) chunks.push(allRows.slice(i, i + chunkSize));
+            
+            downloadArea.innerHTML = `<b style="color: green;">✅ প্রসেস সম্পন্ন!</b><br>মোট ছোট ফাইল তৈরি হয়েছে: <b>${chunks.length} টি</b><br><br>`;
+            chunks.forEach((chunk, index) => {
+                let csvContent = header + '\n' + chunk.join('\n');
+                let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                let link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `Campaign_File_${index + 1}.csv`;
+                link.className = "download-link"; link.innerText = `📄 ফাইল - ${index + 1} ডাউনলোড করুন`;
+                downloadArea.appendChild(link);
+            });
+        });
+
+        // বাল্ক সেন্ডার লজিক
+        function parseCSVLine(text) {
+            let ret = [], keep = false, cur = '';
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                if (c === '"') keep = !keep;
+                else if (c === ',' && !keep) { ret.push(cur.trim()); cur = ''; }
+                else cur += c;
+            }
+            ret.push(cur.trim());
+            return ret.map(s => s.replace(/^"|"$/g, '').trim());
+        }
+
+        function getFirstName(fullName) {
+            if (!fullName) return "গ্রাহক";
+            let parts = fullName.split(' ').filter(p => p.trim() !== '');
+            if (parts.length > 1 && ['md', 'md.', 'mr', 'mr.', 'ms', 'mrs'].includes(parts[0].toLowerCase())) return parts[1]; 
+            return parts[0] || "গ্রাহক";
+        }
+
+        function getShortProduct(longName) {
+            if (!longName) return "প্রোডাক্ট";
+            let lower = longName.toLowerCase();
+            if (lower.includes('power bank') || lower.includes('পাওয়ার ব্যাংক')) return "পাওয়ার ব্যাংক";
+            if (lower.includes('tws') || lower.includes('earbud') || lower.includes('ইয়ারবাড')) return "ইয়ারবাড";
+            if (lower.includes('headphone') || lower.includes('হেডফোন')) return "হেডফোন";
+            if (lower.includes('neckband') || lower.includes('নেকব্যান্ড')) return "নেকব্যান্ড";
+            if (lower.includes('watch') || lower.includes('স্মার্টওয়াচ')) return "স্মার্টওয়াচ";
+            let words = longName.split(' '); return words.slice(0, 3).join(' '); 
+        }
+
+        function replaceTagsSafely(text, customerName, productName) {
+            if(!text) return "";
+            return text
+                .split('[Name]').join(customerName).split('[name]').join(customerName).split('[NAME]').join(customerName)
+                .split('[Product]').join(productName).split('[product]').join(productName).split('[PRODUCT]').join(productName);
+        }
+
+        function updatePreview() {
+            const baseMessage = document.getElementById('messageBox').value;
+            const previewBox = document.getElementById('previewBox');
+            if (!baseMessage) { previewBox.innerText = "আপনার লেখা মেসেজ এখানে দেখতে পারবেন..."; return; }
+            previewBox.innerText = replaceTagsSafely(baseMessage, "Shahed", "পাওয়ার ব্যাংক");
+        }
+        document.getElementById('messageBox').addEventListener('input', updatePreview);
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const pwd = document.getElementById('adminPassword').value;
+            const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
+            const data = await res.json();
+            if (data.success) {
+                savedPassword = pwd;
+                document.getElementById('loginBox').style.display = 'none';
+                checkStatus(); setInterval(checkStatus, 3000); 
+            } else { alert(data.message); }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            if (!confirm('লগআউট করতে চান?')) return;
+            try {
+                const res = await fetch('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: savedPassword }) });
+                if ((await res.json()).success) {
+                    document.getElementById('mainApp').style.display = 'none';
+                    document.getElementById('qrSection').style.display = 'block';
+                    document.getElementById('qrImage').style.display = 'none';
+                    document.getElementById('qrLoading').style.display = 'block';
+                }
+            } catch (err) {}
+        });
+
+        async function checkStatus() {
+            try {
+                const res = await fetch('/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: savedPassword }) });
+                const data = await res.json();
+                if (data.connected) {
+                    document.getElementById('qrSection').style.display = 'none'; document.getElementById('mainApp').style.display = 'block';
+                } else {
+                    document.getElementById('mainApp').style.display = 'none'; document.getElementById('qrSection').style.display = 'block';
+                    if (data.qr) { document.getElementById('qrImage').src = data.qr; document.getElementById('qrImage').style.display = 'inline-block'; document.getElementById('qrLoading').style.display = 'none'; }
+                }
+            } catch (e) {}
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('csvFile').files[0];
+            const mediaFile = document.getElementById('mediaFile').files[0];
+            const baseMessage = document.getElementById('messageBox').value;
+            const delay = document.getElementById('delayBox').value;
+            
+            if (!baseMessage) { alert("দয়া করে মেসেজ লিখুন!"); return; }
+
+            let csvText = "";
+            if (fileInput) {
+                csvText = await readFileAsText(fileInput);
+            } else if (selectedGalleryCsv) {
+                const res = await fetch('/uploads/' + selectedGalleryCsv);
+                csvText = await res.text();
+            } else {
+                alert("দয়া করে একটি CSV ফাইল আপলোড করুন অথবা গ্যালারি থেকে বাছুন!"); return;
+            }
+
+            let successCount = 0; let failCount = 0;
+            document.getElementById('successCount').innerText = "0"; document.getElementById('failCount').innerText = "0";
+            const logsDiv = document.getElementById('logs'); logsDiv.innerHTML = "প্রসেসিং শুরু হচ্ছে...<br>";
+            const log = (msg) => { logsDiv.innerHTML += msg + "<br>"; logsDiv.scrollTop = logsDiv.scrollHeight; };
+            document.getElementById('sendBtn').disabled = true;
+
+            const rows = csvText.split('\n').filter(row => row.trim() !== '');
+            if (rows.length < 2) { alert("ফাইলে ডাটা নেই!"); document.getElementById('sendBtn').disabled = false; return; }
+
+            const headers = parseCSVLine(rows[0]).map(h => h.toLowerCase());
+            const phoneCol = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('number'));
+            const nameCol = headers.findIndex(h => h.includes('name') || h.includes('customer'));
+            const productCol = headers.findIndex(h => h.includes('product') || h.includes('item') || h.includes('title'));
+
+            if (phoneCol === -1) { alert("ফাইলে ফোন নাম্বারের কলাম নেই!"); document.getElementById('sendBtn').disabled = false; return; }
+
+            let customers = [];
+            for(let i = 1; i < rows.length; i++) { 
+                const cols = parseCSVLine(rows[i]);
+                if (cols.length > phoneCol) {
+                    let cleanPhone = cols[phoneCol] ? cols[phoneCol].replace(/\D/g, '') : ''; 
+                    if (cleanPhone) {
+                        if (cleanPhone.length === 11 && cleanPhone.startsWith('01')) cleanPhone = '88' + cleanPhone;
+                        let cNameShort = getFirstName(nameCol !== -1 && cols[nameCol] ? cols[nameCol] : "গ্রাহক");
+                        let cProductShort = getShortProduct(productCol !== -1 && cols[productCol] ? cols[productCol] : "");
+                        customers.push({ phone: cleanPhone, name: cNameShort, product: cProductShort });
+                    }
+                }
+            }
+
+            document.getElementById('totalCount').innerText = customers.length;
+            log(`মোট কাস্টমার: ${customers.length} জন।`);
+
+            for(let i = 0; i < customers.length; i++) {
+                const customer = customers[i];
+                let finalMessage = replaceTagsSafely(baseMessage, customer.name, customer.product);
+                let formData = new FormData();
+                formData.append('password', savedPassword);
+                formData.append('phone', customer.phone); 
+                formData.append('message', finalMessage);
+                
+                if (mediaFile) formData.append('media', mediaFile);
+                else if (selectedGalleryMedia) formData.append('existingMedia', selectedGalleryMedia);
+
+                try {
+                    let res = await fetch('/send', { method: 'POST', body: formData });
+                    if(res.ok) {
+                        log(`✔ সফল: ${customer.name} (${customer.phone})`);
+                        successCount++; document.getElementById('successCount').innerText = successCount;
+                    } else {
+                        log(`✖ ব্যর্থ: ${customer.phone}`);
+                        failCount++; document.getElementById('failCount').innerText = failCount;
+                    }
+                } catch (err) {
+                    log(`✖ এরর: ${customer.phone}`);
+                    failCount++; document.getElementById('failCount').innerText = failCount;
+                }
+
+                if(i < customers.length - 1) {
+                    log(`অপেক্ষা করা হচ্ছে ${delay} সেকেন্ড...`);
+                    await new Promise(r => setTimeout(r, delay * 1000));
+                }
+            }
+            log("<br>🎉 ক্যাম্পেইন শেষ!");
+            document.getElementById('sendBtn').disabled = false;
+        });
+    </script>
+</body>
+</html>
