@@ -46,7 +46,7 @@
 <body>
     <div class="container" id="loginBox">
         <h2 class="text-center">🔐 Web Craft BD - লগইন</h2>
-        <input type="password" id="adminPassword" placeholder="পাসওয়ার্ড দিন...">
+        <input type="password" id="adminPassword" placeholder="পাসওয়ার্ড দিন...">
         <button id="loginBtn">প্রবেশ করুন</button>
     </div>
 
@@ -91,8 +91,8 @@
             <label style="margin-top: 15px; display: block; font-weight: bold; color: #d35400;">👀 লাইভ প্রিভিউ:</label>
             <div id="previewBox">আপনার লেখা মেসেজ এখানে দেখতে পারবেন...</div>
 
-            <label style="margin-top: 15px; display: block;">৪. প্রতি মেসেজের মাঝে বিরতি (সেকেন্ড)</label>
-            <input type="number" id="delayBox" value="15" min="5">
+            <label style="margin-top: 15px; display: block;">৪. মেসেজ গ্যাপ: নিজে থেকেই ৫ থেকে ১৫ সেকেন্ডের রেন্ডম গ্যাপ নেবে।</label>
+            <input type="hidden" id="delayBox" value="15"> <!-- হিডেন রাখা হলো, যেন ইউজার কনফিউজড না হয় -->
 
             <button id="sendBtn">ক্যাম্পেইন শুরু করুন</button>
 
@@ -107,8 +107,8 @@
 
         <!-- CSV স্প্লিটার ট্যাব -->
         <div id="tabSplitter">
-            <h3 style="margin-top: 0; color: #333;">বড় ফাইল কেটে ছোট করুন</h3>
-            <label>১. আপনার বড় CSV ফাইলগুলো সিলেক্ট করুন (একাধিক দেওয়া যাবে)</label>
+            <h3 style="margin-top: 0; color: #333;">বড় ফাইল কেটে ছোট করুন</h3>
+            <label>১. আপনার বড় CSV ফাইলগুলো সিলেক্ট করুন (একাধিক দেওয়া যাবে)</label>
             <input type="file" id="splitFiles" accept=".csv" multiple>
             <label>২. প্রতি ফাইলে কতজনের ডাটা রাখবেন?</label>
             <input type="number" id="chunkSize" value="100" min="10">
@@ -117,7 +117,7 @@
         </div>
     </div>
 
-    <!-- 🔴 গ্যালারি পপআপ মোডাল (আপডেট করা হয়েছে) -->
+    <!-- 🔴 গ্যালারি পপআপ মোডাল (আপডেট করা হয়েছে) -->
     <div id="galleryModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeGallery()">&times;</span>
@@ -142,7 +142,14 @@
         let savedPassword = "";
         let selectedGalleryCsv = "";
         let selectedGalleryMedia = "";
-        let currentGalleryType = 'image'; // বর্তমানে কোন গ্যালারি খোলা আছে তা বোঝার জন্য
+        let currentGalleryType = 'image';
+
+        // ৫ থেকে ১৫ সেকেন্ডের রেন্ডম গ্যাপ জেনারেট করার ফাংশন
+        function getRandomDelay() {
+            const min = 5;
+            const max = 15;
+            return Math.floor(Math.random() * (max - min + 1) + min);
+        }
 
         function switchTab(tabName) {
             if(tabName === 'sender') {
@@ -158,29 +165,25 @@
             }
         }
 
-        // 🔴 গ্যালারিতে ফাইল সরাসরি আপলোড করার ফাংশন
         async function uploadToGallery() {
             const fileInput = document.getElementById('galleryUploadInput');
-            if(!fileInput.files[0]) return alert('দয়া করে আপলোড করার জন্য একটি ফাইল সিলেক্ট করুন!');
+            if(!fileInput.files[0]) return alert('দয়া করে আপলোড করার জন্য একটি ফাইল সিলেক্ট করুন!');
             
             const formData = new FormData();
             formData.append('password', savedPassword);
             formData.append('file', fileInput.files[0]);
             
             document.getElementById('uploadStatus').style.color = "blue";
-            document.getElementById('uploadStatus').innerText = "আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...";
+            document.getElementById('uploadStatus').innerText = "আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...";
             
             try {
                 const res = await fetch('/upload-file', { method: 'POST', body: formData });
                 const data = await res.json();
                 if(data.success) {
                     document.getElementById('uploadStatus').style.color = "green";
-                    document.getElementById('uploadStatus').innerText = "✅ আপলোড সফল হয়েছে!";
+                    document.getElementById('uploadStatus').innerText = "✅ আপলোড সফল হয়েছে!";
                     fileInput.value = ""; 
-                    
-                    // ফাইল আপলোড হওয়ার সাথে সাথে গ্যালারি রিফ্রেশ করা
                     openGallery(currentGalleryType); 
-                    
                     setTimeout(() => { document.getElementById('uploadStatus').innerText = ""; }, 4000);
                 } else {
                     document.getElementById('uploadStatus').style.color = "red";
@@ -204,7 +207,7 @@
                 
                 let html = "";
                 if (type === 'image') {
-                    if (data.images.length === 0) html = "<p>কোনো ছবি পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
+                    if (data.images.length === 0) html = "<p>কোনো ছবি পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
                     else {
                         html = '<div class="gallery-grid">';
                         data.images.forEach(img => {
@@ -213,7 +216,7 @@
                         html += '</div>';
                     }
                 } else {
-                    if (data.csvs.length === 0) html = "<p>কোনো CSV ফাইল পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
+                    if (data.csvs.length === 0) html = "<p>কোনো CSV ফাইল পাওয়া যায়নি। উপরের অপশন থেকে আপলোড করুন।</p>";
                     else {
                         data.csvs.forEach(csv => {
                             html += `<div class="csv-item" onclick="selectGalleryItem('${csv}', 'csv')">📄 ${csv}</div>`;
@@ -222,7 +225,7 @@
                 }
                 document.getElementById('galleryContent').innerHTML = html;
             } catch(e) {
-                document.getElementById('galleryContent').innerHTML = "এরর হয়েছে!";
+                document.getElementById('galleryContent').innerHTML = "এরর হয়েছে!";
             }
         }
 
@@ -281,7 +284,6 @@
             });
         });
 
-        // বাল্ক সেন্ডার লজিক
         function parseCSVLine(text) {
             let ret = [], keep = false, cur = '';
             for (let i = 0; i < text.length; i++) {
@@ -305,7 +307,7 @@
             if (!longName) return "প্রোডাক্ট";
             let lower = longName.toLowerCase();
             if (lower.includes('power bank') || lower.includes('পাওয়ার ব্যাংক')) return "পাওয়ার ব্যাংক";
-            if (lower.includes('tws') || lower.includes('earbud') || lower.includes('ইয়ারবাড')) return "ইয়ারবাড";
+            if (lower.includes('tws') || lower.includes('earbud') || lower.includes('ইয়ারবাড')) return "ইয়ারবাড";
             if (lower.includes('headphone') || lower.includes('হেডফোন')) return "হেডফোন";
             if (lower.includes('neckband') || lower.includes('নেকব্যান্ড')) return "নেকব্যান্ড";
             if (lower.includes('watch') || lower.includes('স্মার্টওয়াচ')) return "স্মার্টওয়াচ";
@@ -323,7 +325,7 @@
             const baseMessage = document.getElementById('messageBox').value;
             const previewBox = document.getElementById('previewBox');
             if (!baseMessage) { previewBox.innerText = "আপনার লেখা মেসেজ এখানে দেখতে পারবেন..."; return; }
-            previewBox.innerText = replaceTagsSafely(baseMessage, "Shahed", "পাওয়ার ব্যাংক");
+            previewBox.innerText = replaceTagsSafely(baseMessage, "Shahed", "পাওয়ার ব্যাংক");
         }
         document.getElementById('messageBox').addEventListener('input', updatePreview);
 
@@ -368,9 +370,8 @@
             const fileInput = document.getElementById('csvFile').files[0];
             const mediaFile = document.getElementById('mediaFile').files[0];
             const baseMessage = document.getElementById('messageBox').value;
-            const delay = document.getElementById('delayBox').value;
             
-            if (!baseMessage) { alert("দয়া করে মেসেজ লিখুন!"); return; }
+            if (!baseMessage) { alert("দয়া করে মেসেজ লিখুন!"); return; }
 
             let csvText = "";
             if (fileInput) {
@@ -379,7 +380,7 @@
                 const res = await fetch('/uploads/' + selectedGalleryCsv);
                 csvText = await res.text();
             } else {
-                alert("দয়া করে একটি CSV ফাইল আপলোড করুন অথবা গ্যালারি থেকে বাছুন!"); return;
+                alert("দয়া করে একটি CSV ফাইল আপলোড করুন অথবা গ্যালারি থেকে বাছুন!"); return;
             }
 
             let successCount = 0; let failCount = 0;
@@ -441,8 +442,10 @@
                 }
 
                 if(i < customers.length - 1) {
-                    log(`অপেক্ষা করা হচ্ছে ${delay} সেকেন্ড...`);
-                    await new Promise(r => setTimeout(r, delay * 1000));
+                    // রেন্ডম গ্যাপ কল করা হচ্ছে
+                    let currentDelay = getRandomDelay();
+                    log(`অপেক্ষা করা হচ্ছে ${currentDelay} সেকেন্ড...`);
+                    await new Promise(r => setTimeout(r, currentDelay * 1000));
                 }
             }
             log("<br>🎉 ক্যাম্পেইন শেষ!");
