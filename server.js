@@ -29,11 +29,21 @@ const ADMIN_PASSWORD = "1234";
 let currentQR = "";
 let isConnected = false;
 
+// 🔴 র‍্যাম বাঁচানোর জন্য Puppeteer-এ বিশেষ কোড যুক্ত করা হয়েছে
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: { 
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--single-process'
+        ]
     }
 });
 
@@ -104,7 +114,6 @@ app.post('/upload-file', upload.single('file'), (req, res) => {
     }
 });
 
-// ৫ থেকে ১৫ সেকেন্ডের রেন্ডম গ্যাপ তৈরি করার ফাংশন
 const randomDelay = () => {
     const min = 5;
     const max = 15;
@@ -112,7 +121,6 @@ const randomDelay = () => {
     return new Promise(resolve => setTimeout(resolve, delayTime));
 };
 
-// সিঙ্গেল মেসেজ পাঠানোর আগের API
 app.post('/send', upload.single('media'), async (req, res) => {
     if (req.body.password !== ADMIN_PASSWORD) return res.status(401).send('Unauthorized');
 
@@ -129,7 +137,6 @@ app.post('/send', upload.single('media'), async (req, res) => {
             mediaPath = path.join(__dirname, 'uploads', path.basename(existingMedia));
         }
 
-        // মেসেজ পাঠানোর আগে রেন্ডম গ্যাপ (৫-১৫ সেকেন্ড)
         await randomDelay();
 
         if (mediaPath && fs.existsSync(mediaPath)) {
